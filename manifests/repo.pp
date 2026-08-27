@@ -3,43 +3,43 @@
 # Installs the appropriate repositories from which percona packages
 # can be installed
 #
-class galera::repo(
+class galera::repo (
   $repo_vendor = $galera::vendor_type,
   $epel_needed = true,
 
   # Ubuntu-Debian/percona
   $apt_percona_repo_location = 'http://repo.percona.com/apt/',
-  $apt_percona_repo_release = $::lsbdistcodename,
+  $apt_percona_repo_release = $facts['os']['distro']['codename'],
   $apt_percona_repo_repos = 'main',
   $apt_percona_repo_key = '4D1BB29D63D98E422B2113B19334A25F8507EFA5',
   $apt_percona_repo_key_server = 'keyserver.ubuntu.com',
   $apt_percona_repo_include_src = false,
 
   # Ubuntu-Debian/mariadb
-  $apt_mariadb_repo_location = $::operatingsystem ? {
+  $apt_mariadb_repo_location = $facts['os']['name'] ? {
     'Debian' => 'http://mirror.aarnet.edu.au/pub/MariaDB/repo/5.5/debian',
     default  => 'http://mirror.aarnet.edu.au/pub/MariaDB/repo/5.5/ubuntu',
   },
-  $apt_mariadb_repo_release = $::lsbdistcodename,
+  $apt_mariadb_repo_release = $facts['os']['distro']['codename'],
   $apt_mariadb_repo_repos = 'main',
   $apt_mariadb_repo_key = '199369E5404BD5FC7D2FE43BCBCB082A1BB943DB',
   $apt_mariadb_repo_key_server = 'keys.gnupg.net',
   $apt_mariadb_repo_include_src = false,
 
   # Ubuntu-Debian/codership
-  $apt_codership_repo_location = $::operatingsystem ? {
+  $apt_codership_repo_location = $facts['os']['name'] ? {
     'Debian' => 'http://releases.galeracluster.com/debian',
     default  => 'http://releases.galeracluster.com/ubuntu',
   },
-  $apt_codership_repo_release      = $::lsbdistcodename,
+  $apt_codership_repo_release      = $facts['os']['distro']['codename'],
   $apt_codership_repo_repos        = 'main',
   $apt_codership_repo_key          = '44B7345738EBDE52594DAD80D669017EBC19DDBA',
   $apt_codership_repo_key_server   = 'keyserver.ubuntu.com',
   $apt_codership_repo_include_src  = false,
 
   #RedHat/percona
-  $yum_percona_descr = "CentOS ${::operatingsystemmajrelease} - Percona",
-  $yum_percona_baseurl = "http://repo.percona.com/centos/${::operatingsystemmajrelease}/os/${::architecture}/",
+  $yum_percona_descr = "CentOS ${facts['os']['release']['major']} - Percona",
+  $yum_percona_baseurl = "http://repo.percona.com/centos/${facts['os']['release']['major']}/os/${facts['os']['architecture']}/",
   $yum_percona_gpgkey = 'http://www.percona.com/downloads/percona-release/RPM-GPG-KEY-percona',
   $yum_percona_enabled = 1,
   $yum_percona_gpgcheck = 1,
@@ -52,24 +52,24 @@ class galera::repo(
   $yum_mariadb_baseurl = undef,
 
   #RedHat/codership
-  $yum_codership_descr    = "CentOS ${::operatingsystemmajrelease} - Codership",
-  $yum_codership_baseurl  = "http://releases.galeracluster.com/centos/${::operatingsystemmajrelease}/${::architecture}/",
+  $yum_codership_descr    = "CentOS ${facts['os']['release']['major']} - Codership",
+  $yum_codership_baseurl  = "http://releases.galeracluster.com/centos/${facts['os']['release']['major']}/${facts['os']['architecture']}/",
   $yum_codership_gpgkey   = 'http://releases.galeracluster.com/GPG-KEY-galeracluster.com',
   $yum_codership_enabled  = 1,
   $yum_codership_gpgcheck = 1,
 ) {
-  include ::galera::params
+  include galera::params
 
   if ! $yum_mariadb_baseurl {
-    $lower = downcase($::operatingsystem)
-    $real_yum_mariadb_baseurl = "http://yum.mariadb.org/5.5-galera/${lower}${::operatingsystemmajrelease}-amd64"
+    $lower = downcase($facts['os']['name'])
+    $real_yum_mariadb_baseurl = "http://yum.mariadb.org/5.5-galera/${lower}${facts['os']['release']['major']}-amd64"
   } else {
     $real_yum_mariadb_baseurl = $yum_mariadb_baseurl
   }
 
-  case $::osfamily {
+  case $facts['os']['family'] {
     'Debian': {
-      if ($::operatingsystem == 'Ubuntu') or ($::operatingsystem == 'Debian') {
+      if ($facts['os']['name'] == 'Ubuntu') or ($facts['os']['name'] == 'Debian') {
         if ($repo_vendor == 'percona') {
           apt::source { 'galera_percona_repo':
             location => $apt_percona_repo_location,
@@ -124,18 +124,18 @@ class galera::repo(
           gpgkey   => $yum_percona_gpgkey,
           enabled  => $yum_percona_enabled,
           gpgcheck => $yum_percona_gpgcheck,
-        } -> package {'Percona-Server-shared-compat':
-      }
+        } -> package { 'Percona-Server-shared-compat':
+        }
 
         if $epel_needed {
           # Needed for socat package
           yumrepo { 'epel':
-            mirrorlist     => "http://mirrors.fedoraproject.org/mirrorlist?repo=epel-${::os_maj_version}&arch=${::architecture}",
+            mirrorlist     => "http://mirrors.fedoraproject.org/mirrorlist?repo=epel-${facts['os_maj_version']}&arch=${facts['os']['architecture']}",
             baseurl        => 'absent',
             failovermethod => 'priority',
             enabled        => '1',
             gpgcheck       => '1',
-            gpgkey         => 'https://fedoraproject.org/static/0608B895.txt'
+            gpgkey         => 'https://fedoraproject.org/static/0608B895.txt',
           }
         }
       }
@@ -145,7 +145,7 @@ class galera::repo(
           enabled  => $yum_mariadb_enabled,
           gpgcheck => $yum_mariadb_gpgcheck,
           gpgkey   => $yum_mariadb_gpgkey,
-          baseurl  => $real_yum_mariadb_baseurl
+          baseurl  => $real_yum_mariadb_baseurl,
         }
         include galera::mariadb
       }
@@ -155,7 +155,7 @@ class galera::repo(
           enabled  => $yum_codership_enabled,
           gpgcheck => $yum_codership_gpgcheck,
           gpgkey   => $yum_codership_gpgkey,
-          baseurl  => $yum_codership_baseurl
+          baseurl  => $yum_codership_baseurl,
         }
       }
     }

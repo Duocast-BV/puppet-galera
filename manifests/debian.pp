@@ -3,7 +3,7 @@
 # Fixes Debian specific compatibility issues
 #
 class galera::debian {
-  if ($::osfamily != 'Debian') {
+  if ($facts['os']['family'] != 'Debian') {
     warn('the galera::debian class has been included on a non-debian host')
   }
 
@@ -12,20 +12,20 @@ class galera::debian {
   # by putting a default my.cnf in place before installing the package, then putting the
   # real config file back after installing the package but before starting the service for real
   file { '/etc/mysql/puppet_debfix.cnf':
-    ensure  => present,
+    ensure  => file,
     owner   => 'root',
     group   => 'root',
     content => template('galera/debian_default_my_cnf'),
     require => Class['mysql::server::config'],
-  } ~>
+  }
 
-  exec { 'fix_galera_config_errors_episode_I':
+  ~> exec { 'fix_galera_config_errors_episode_I':
     command     => 'mv -f /etc/mysql/my.cnf /tmp/my.cnf && cp -f /etc/mysql/puppet_debfix.cnf /etc/mysql/my.cnf',
     path        => '/usr/bin:/bin:/usr/sbin:/sbin',
     refreshonly => true,
-  } ~>
+  }
 
-  exec { 'fix_galera_config_errors_episode_II':
+  ~> exec { 'fix_galera_config_errors_episode_II':
     command     => 'cp -f /tmp/my.cnf /etc/mysql/my.cnf',
     path        => '/usr/bin:/bin:/usr/sbin:/sbin',
     refreshonly => true,
@@ -49,8 +49,7 @@ class galera::debian {
   # Required for Puppet 4
   $deb_sysmaint_password = $galera::deb_sysmaint_password
 
-  if ($::fqdn == $galera::galera_master) {
-
+  if ($facts['networking']['fqdn'] == $galera::galera_master) {
     # Debian sysmaint pw will be set on the master,
     # and needs to be consistent across the cluster.
     mysql_user { 'debian-sys-maint@localhost':
@@ -69,7 +68,7 @@ class galera::debian {
     }
 
     file { '/etc/mysql/debian.cnf':
-      ensure  => present,
+      ensure  => file,
       owner   => 'root',
       group   => 'root',
       mode    => '0600',
@@ -80,7 +79,7 @@ class galera::debian {
     # Ensure this file is changed only after stopping the service or
     # said service stop operation will fail
     file { '/etc/mysql/debian.cnf':
-      ensure  => present,
+      ensure  => file,
       owner   => 'root',
       group   => 'root',
       mode    => '0600',

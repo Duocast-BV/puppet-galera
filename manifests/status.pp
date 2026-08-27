@@ -25,30 +25,30 @@ class galera::status {
       mysql_user { "${status_user}@${status_allow}":
         ensure        => 'present',
         password_hash => mysql_password($status_password),
-        require       => [File['/root/.my.cnf'],Service['mysqld']]
-      } ->
-      mysql_grant { "${status_user}@${status_allow}/*.*":
+        require       => [File['/root/.my.cnf'],Service['mysqld']],
+      }
+      -> mysql_grant { "${status_user}@${status_allow}/*.*":
         ensure     => 'present',
-        options    => [ 'GRANT' ],
-        privileges => [ 'USAGE' ],
+        options    => ['GRANT'],
+        privileges => ['USAGE'],
         table      => '*.*',
         user       => "${status_user}@${status_allow}",
-        before     => Anchor['mysql::server::end']
+        before     => Anchor['mysql::server::end'],
       }
     }
 
     mysql_user { "${status_user}@localhost":
       ensure        => 'present',
       password_hash => mysql_password($status_password),
-      require       => [File['/root/.my.cnf'],Service['mysqld']]
-    } ->
-    mysql_grant { "${status_user}@localhost/*.*":
+      require       => [File['/root/.my.cnf'],Service['mysqld']],
+    }
+    -> mysql_grant { "${status_user}@localhost/*.*":
       ensure     => 'present',
-      options    => [ 'GRANT' ],
-      privileges => [ 'USAGE' ],
+      options    => ['GRANT'],
+      privileges => ['USAGE'],
       table      => '*.*',
       user       => "${status_user}@localhost",
-      before     => Anchor['mysql::server::end']
+      before     => Anchor['mysql::server::end'],
     }
   }
 
@@ -96,7 +96,7 @@ class galera::status {
     require                 => [
       File['/usr/local/bin/clustercheck'],
       User['clustercheck'],
-      Class['mysql::server::install']],
+    Class['mysql::server::install']],
     before                  => Anchor['mysql::server::end'],
   }
 }

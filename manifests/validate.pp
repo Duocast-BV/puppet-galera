@@ -41,7 +41,7 @@
 #   (optional) A string that if not present indicates failure
 #   Defaults to undef
 #
-class galera::validate(
+class galera::validate (
   $user      = $galera::status_user,
   $password  = $galera::status_password,
   $host      = $galera::bind_address,
@@ -71,9 +71,8 @@ class galera::validate(
     subscribe   => Service['mysqld'],
     refreshonly => true,
     before      => Anchor['mysql::server::end'],
-    require     => Class['galera::status']
+    require     => Class['galera::status'],
   }
 
   Exec<| title == 'bootstrap_galera_cluster' |> ~> Exec['validate_connection']
 }
-

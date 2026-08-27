@@ -177,9 +177,9 @@
 #   (optional) Determines which fields xinetd will log on failure
 #   Defaults to undef
 #
-class galera(
+class galera (
   $galera_servers                 = [$facts['networking']['ip']],
-  $galera_master                  = $::fqdn,
+  $galera_master                  = $facts['networking']['fqdn'],
   $local_ip                       = $facts['networking']['ip'],
   $bind_address                   = $facts['networking']['ip'],
   $mysql_port                     = 3306,
@@ -221,7 +221,7 @@ class galera(
 ) {
   if $configure_repo {
     include galera::repo
-    Class['::galera::repo'] -> Class['mysql::server']
+    Class['galera::repo'] -> Class['mysql::server']
   }
 
   if $configure_firewall {
@@ -229,7 +229,7 @@ class galera(
   }
 
   # Debian machines need some help
-  if ($::osfamily == 'Debian') {
+  if ($facts['os']['family'] == 'Debian') {
     include galera::debian
   }
 
@@ -246,7 +246,7 @@ class galera(
   $options = mysql_deepmerge($galera::params::default_options, $override_options)
 
   if ($create_root_user == undef) {
-    if ($galera_master == $::fqdn) {
+    if ($galera_master == $facts['networking']['fqdn']) {
       # manage root user on the galera master
       $create_root_user_real = true
     } else {
@@ -263,18 +263,18 @@ class galera(
     # Check if we can already login with the given password
     $my_cnf = "[client]\r\nuser=root\r\nhost=localhost\r\npassword='${root_password}'\r\n"
 
-    exec { "create ${::root_home}/.my.cnf":
-      command => "/bin/echo -e \"${my_cnf}\" > ${::root_home}/.my.cnf",
+    exec { "create ${facts['root_home']}/.my.cnf":
+      command => "/bin/echo -e \"${my_cnf}\" > ${facts['root_home']}/.my.cnf",
       onlyif  => [
         "/usr/bin/mysql --user=root --password=${root_password} -e 'select count(1);'",
-        "/usr/bin/test `/bin/cat ${::root_home}/.my.cnf | /bin/grep -c \"password='${root_password}'\"` -eq 0",
-        ],
+        "/usr/bin/test `/bin/cat ${facts['root_home']}/.my.cnf | /bin/grep -c \"password='${root_password}'\"` -eq 0",
+      ],
       require => Service['mysqld'],
       before  => [Class['mysql::server::root_password']],
     }
   }
 
-  class { '::mysql::server':
+  class { 'mysql::server':
     package_name       => $galera::params::mysql_package_name,
     override_options   => $options,
     root_password      => $root_password,
@@ -290,15 +290,15 @@ class galera(
     owner   => 'mysql',
     group   => 'mysql',
     require => Class['mysql::server::install'],
-    before  => Class['mysql::server::installdb']
+    before  => Class['mysql::server::installdb'],
   }
 
   if $manage_additional_packages and $galera::params::additional_packages {
     ensure_resource(package, $galera::params::additional_packages,
-    {
-      ensure  => $package_ensure,
-      before  => Class['mysql::server::install'],
-      require => Class['mysql::server::config']
+      {
+        ensure  => $package_ensure,
+        before  => Class['mysql::server::install'],
+        require => Class['mysql::server::config']
     })
   }
 
@@ -306,16 +306,15 @@ class galera(
     name => $galera::params::client_package_name
   }
 
-  package{[
+  package {[
       $galera::params::galera_package_name,
-      ] :
-    ensure  => $package_ensure,
-    before  => Class['mysql::server::install'],
-    require => Class['mysql::server::config']
+    ]:
+      ensure  => $package_ensure,
+      before  => Class['mysql::server::install'],
+      require => Class['mysql::server::config'],
   }
 
-
-  if $::fqdn == $galera_master {
+  if $facts['networking']['fqdn'] == $galera_master {
     # If there are no other servers up and we are the master, the cluster
     # needs to be bootstrapped. This happens before the service is managed
     $server_list = join($galera_servers, ' ')
@@ -323,7 +322,7 @@ class galera(
     if $manage_package_nmap {
       package { 'nmap':
         ensure => $package_ensure,
-        before => Exec['bootstrap_galera_cluster']
+        before => Exec['bootstrap_galera_cluster'],
       }
     }
 
@@ -333,8 +332,7 @@ class galera(
       require  => Class['mysql::server::installdb'],
       before   => Service['mysqld'],
       provider => shell,
-      path     => '/usr/bin:/bin:/usr/sbin:/sbin'
+      path     => '/usr/bin:/bin:/usr/sbin:/sbin',
     }
-
   }
 }

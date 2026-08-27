@@ -8,7 +8,7 @@ class galera::params {
   if $galera::vendor_type == 'percona' {
     $bootstrap_command = '/etc/init.d/mysql bootstrap-pxc'
   } elsif ($galera::vendor_type == 'mariadb' or $galera::vendor_type == 'codership') {
-    if ($::osfamily == 'RedHat' and versioncmp($::operatingsystemrelease, '7') >= 0 and
+    if ($facts['os']['family'] == 'RedHat' and versioncmp($facts['os']['release']['full'], '7') >= 0 and
       $galera::vendor_version and versioncmp($galera::vendor_version, '10.0') == 1
     ) {
       # We have systemd and we should use the binary
@@ -22,7 +22,7 @@ class galera::params {
     $bootstrap_command = 'touch /var/log/mysqld.log ; chown mysql:mysql /var/log/mysqld.log ; systemctl start mysqld'
   }
 
-  if ($::osfamily == 'RedHat') {
+  if ($facts['os']['family'] == 'RedHat') {
     if $galera::vendor_type == 'percona' {
       if $galera::vendor_version == '5.6' {
         $mysql_package_name_internal = 'Percona-XtraDB-Cluster-server-56'
@@ -77,14 +77,12 @@ class galera::params {
       $client_package_name_internal = 'mariadb'
       $libgalera_location           = '/usr/lib64/galera/libgalera_smm.so'
     }
-    $osr_array = split($::operatingsystemrelease,'[\/\.]')
+    $osr_array = split($facts['os']['release']['full'],'[\/\.]')
     $distrelease = $osr_array[0]
 
-
     $rundir = '/var/run/mysqld'
-
   }
-  elsif ($::osfamily == 'Debian'){
+  elsif ($facts['os']['family'] == 'Debian') {
     $mysql_service_name_internal = 'mysql'
     if $galera::vendor_type == 'percona' {
       if $galera::vendor_version == '5.6' {
@@ -138,24 +136,22 @@ class galera::params {
   #  mysqldump, xtrabackup, and xtrabackup-v2
   if ($galera::wsrep_sst_method == 'rsync') {
     $additional_packages = 'rsync'
-  } elsif ($galera::wsrep_sst_method in
-    [ 'xtrabackup',
-    'xtrabackup-v2' ]) {
-
+  } elsif ($galera::wsrep_sst_method in ['xtrabackup',
+  'xtrabackup-v2']) {
     if $galera::vendor_version == '5.7' {
       $additional_packages = 'percona-xtrabackup-24'
     } else {
       $additional_packages = 'percona-xtrabackup'
     }
   }
-  if ($galera::wsrep_sst_method in [ 'skip', 'rsync' ]) {
+  if ($galera::wsrep_sst_method in ['skip', 'rsync']) {
     $wsrep_sst_auth = undef
   }
-  elsif ($galera::wsrep_sst_method in
-    [ 'mysqldump',
+  elsif ($galera::wsrep_sst_method in [
+    'mysqldump',
     'xtrabackup',
-    'xtrabackup-v2' ])
-  {
+    'xtrabackup-v2',
+  ]) {
     $wsrep_sst_auth = "root:${galera::root_password}"
   }
   else {
@@ -181,23 +177,23 @@ class galera::params {
       'wsrep_node_incoming_address'     => $galera::local_ip,
       'wsrep_sst_receive_address'       => $galera::local_ip,
       'wsrep_on'                        => 'ON',
-    }
+    },
   }
 
   $mysql_package_name = pick(
-    $::galera::mysql_package_name,
+    $galera::mysql_package_name,
     $mysql_package_name_internal
   )
   $galera_package_name = pick(
-    $::galera::galera_package_name,
+    $galera::galera_package_name,
     $galera_package_name_internal
   )
   $client_package_name = pick(
-    $::galera::client_package_name,
+    $galera::client_package_name,
     $client_package_name_internal
   )
   $mysql_service_name = pick(
-    $::galera::mysql_service_name,
+    $galera::mysql_service_name,
     $mysql_service_name_internal
   )
 }
