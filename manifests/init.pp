@@ -178,10 +178,10 @@
 #   Defaults to undef
 #
 class galera(
-  $galera_servers                 = [$::ipaddress_eth1],
+  $galera_servers                 = [$facts['networking']['ip']],
   $galera_master                  = $::fqdn,
-  $local_ip                       = $::ipaddress_eth1,
-  $bind_address                   = $::ipaddress_eth1,
+  $local_ip                       = $facts['networking']['ip'],
+  $bind_address                   = $facts['networking']['ip'],
   $mysql_port                     = 3306,
   $wsrep_group_comm_port          = 4567,
   $wsrep_state_transfer_port      = 4444,
